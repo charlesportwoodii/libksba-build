@@ -24,26 +24,48 @@ libksba:
 	wget ftp://ftp.gnupg.org/gcrypt/libksba/libksba-$(VERSION).tar.bz2 && \
 	tar -xf libksba-$(VERSION).tar.bz2 && \
 	cd libksba-$(VERSION) && \
-	mkdir -p /usr/share/man/libksba-$(VERSION) && \
+	mkdir -p /usr/share/man/libksba/$(VERSION) && \
 	./configure \
 	    --prefix=/usr/local \
-	    --mandir=/usr/share/man/libksba-$(VERSION) \
-	    --infodir=/usr/share/info/libksba-$(VERSION) \
-	    --docdir=/usr/share/doc/libksba-$(VERSION) && \
+	    --mandir=/usr/share/man/libksba/$(VERSION) \
+	    --infodir=/usr/share/info/libksba/$(VERSION) \
+	    --docdir=/usr/share/doc/libksba/$(VERSION) && \
 	make -j$(CORES) && \
 	make install
 
-package:
-	cd /tmp/libksba-$(VERSION) && \
-	checkinstall \
-	    -D \
-	    --fstrans \
-	    -pkgrelease "$(RELEASEVER)"-"$(RELEASE)" \
-	    -pkgrelease "$(RELEASEVER)"~"$(RELEASE)" \
-	    -pkgname "libksba" \
-	    -pkglicense GPLv3 \
-	    -pkggroup GPG \
-	    -maintainer charlesportwoodii@ethreal.net \
-	    -provides "libksba-$(VERSION)" \
-	    -pakdir /tmp \
-	    -y
+
+fpm_debian:
+	echo "Packaging libksba for Debian"
+
+	cd /tmp/libksba-$(VERSION) && make install DESTDIR=/tmp/libksba-$(VERSION)-install
+
+	fpm -s dir \
+		-t deb \
+		-n libksba \
+		-v $(VERSION)-$(RELEASEVER)~$(shell lsb_release --codename | cut -f2) \
+		-C /tmp/libksba-$(VERSION)-install \
+		-p libksba_$(VERSION)-$(RELEASEVER)~$(shell lsb_release --codename | cut -f2)_$(shell arch).deb \
+		-m "charlesportwoodii@erianna.com" \
+		--license "GPLv3" \
+		--url https://github.com/charlesportwoodii/libksba-build \
+		--description "libksba" \
+		--deb-systemd-restart-after-upgrade
+
+fpm_rpm:
+	echo "Packaging libksba for RPM"
+
+	cd /tmp/libksba-$(VERSION) && make install DESTDIR=/tmp/libksba-$(VERSION)-install
+
+	fpm -s dir \
+		-t rpm \
+		-n libksba \
+		-v $(VERSION)_$(RELEASEVER) \
+		-C /tmp/libksba-$(VERSION)-install \
+		-p libksba_$(VERSION)-$(RELEASEVER)_$(shell arch).rpm \
+		-m "charlesportwoodii@erianna.com" \
+		--license "GPLv3" \
+		--url https://github.com/charlesportwoodii/libksba-build \
+		--description "libksba" \
+		--vendor "Charles R. Portwood II" \
+		--rpm-digest sha384 \
+		--rpm-compression gzip
